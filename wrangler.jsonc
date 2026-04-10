@@ -22,6 +22,7 @@
   "durable_objects": {
     "bindings": [
       { "class_name": "UserProxy", "name": "USER_PROXY" },
+      { "class_name": "ServiceProxy", "name": "SERVICE_PROXY" },
       { "class_name": "ResourceProxy", "name": "RESOURCE_PROXY" },
     ],
   },

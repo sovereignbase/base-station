@@ -6,6 +6,7 @@ export class UserProxy extends DurableObject<Env> {
   private user: WebSocket;
   private peerOffer = null;
   private resourceProxy = this.env.RESOURCE_PROXY;
+  private serviceProxy = this.env.SERVICE_PROXY;
   async fetch(): Promise<Response> {
     const { 0: clientWebSocket, 1: serverWebSocket } = new WebSocketPair();
     this.user = serverWebSocket;
@@ -16,11 +17,11 @@ export class UserProxy extends DurableObject<Env> {
   async webSocketMessage(sender: WebSocket, message: ArrayBuffer) {
     this.resourceProxy.getByName("").subscribe(this.ctx.id.toString());
   }
+  async resourceMessage(message: unknown) {
+    this.user.send(encode(message));
+  }
 
   webSocketClose(socket: WebSocket) {}
 
   webSocketError(socket: WebSocket, error: unknown) {}
-  async deliver(message: unknown) {
-    this.user.send(encode(message));
-  }
 }
