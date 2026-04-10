@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cloudflare-workers-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-10",
+  "observability": {
+    "enabled": false,
+  },
+  "upload_source_maps": true,
+  "minify": true,
+  "r2_buckets": [],
+  "compatibility_flags": ["nodejs_compat"],
+  "placement": { "mode": "smart" },
+  "vars": { "TURN_TOKEN_ID": "9caaf205b3bd9baeb3040852b39e9067" },
+  "secrets_store_secrets": [
+    {
+      "store_id": "67a9e9f0e67642ba864015b72beb3913",
+      "secret_name": "TURN_API_TOKEN",
+      "binding": "TURN_API_TOKEN",
+    },
+  ],
+  "durable_objects": {
+    "bindings": [{ "class_name": "UserProxy", "name": "USER_PROXY" }],
+  },
+}
