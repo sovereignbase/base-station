@@ -13,7 +13,6 @@
   "placement": { "mode": "smart" },
   "vars": {
     "TURN_TOKEN_ID": "9caaf205b3bd9baeb3040852b39e9067",
-    "STRIPE_PUBLISHABLE_KEY": "pk_test_51ROh5pLNTEHW3fxT5tMsYOdbxEAowWqLcrOMXanPYT2CJg1jiMyazECQiTz4w22MBdn9TmeSqTAttrZPDe9cu3WT00kOiRcqQV",
   },
   "secrets_store_secrets": [
     {

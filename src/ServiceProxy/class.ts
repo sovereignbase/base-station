@@ -1,10 +1,13 @@
 import { DurableObject } from "cloudflare:workers";
+import Stripe from "stripe";
 
 export class ServiceProxy extends DurableObject<Env> {
-  private subscriptions = new Set<string>();
+  private stripe: Stripe;
   private userProxy = this.env.USER_PROXY;
-  async subscribe(durableObjectId: string): Promise<void> {
-    this.subscriptions.add(durableObjectId);
+  async init(durableObjectId: string): Promise<void> {
+    this.stripe = new Stripe(await this.env.STRIPE_SECRET_KEY.get(), {
+      maxNetworkRetries: 2,
+    });
   }
   async relay(topic: string, payload: unknown): Promise<void> {
     for (const subscription of this.subscriptions) {
