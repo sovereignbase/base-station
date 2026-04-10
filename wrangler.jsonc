@@ -14,12 +14,15 @@
   "vars": { "TURN_TOKEN_ID": "9caaf205b3bd9baeb3040852b39e9067" },
   "secrets_store_secrets": [
     {
-      "store_id": "67a9e9f0e67642ba864015b72beb3913",
+      "store_id": "3dca4165b3fa04ce8a41977479759c55",
       "secret_name": "TURN_API_TOKEN",
       "binding": "TURN_API_TOKEN",
     },
   ],
   "durable_objects": {
-    "bindings": [{ "class_name": "UserProxy", "name": "USER_PROXY" }],
+    "bindings": [
+      { "class_name": "UserProxy", "name": "USER_PROXY" },
+      { "class_name": "ResourceProxy", "name": "RESOURCE_PROXY" },
+    ],
   },
 }

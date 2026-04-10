@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Hono } from "hono";
 import { fromHono, OpenAPIRoute } from "chanfana";
-import type { AppContext } from "./types";
+import type { AppContext } from "./types.js";
 
 export class ProxyResolver extends OpenAPIRoute {
   schema = {
@@ -64,3 +64,5 @@ openapi.get("*", ProxyResolver);
 
 // Export the Hono app
 export default app;
+export { UserProxy } from "./UserProxy/class.js";
+export { ResourceProxy } from "./ResourceProxy/class.js";
