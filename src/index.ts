@@ -1,19 +1,23 @@
 import { z } from "zod";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { fromHono, OpenAPIRoute } from "chanfana";
 import type { AppContext } from "./types.js";
 
 export class ProxyResolver extends OpenAPIRoute {
   schema = {
-    tags: ["Relay"],
+    tags: ["Base station", "Relay"],
     summary: "Upgrade to WebSocket for relay session",
     request: {
       headers: z.object({
+        origin: z.string(),
         upgrade: z.string(),
         connection: z.string(),
+        "cf-connecting-ip": z.string(),
         "sec-websocket-key": z.string().min(1),
         "sec-websocket-version": z.literal("13"),
       }),
+      params: z.object({}),
     },
     responses: {
       "101": { description: "WebSocket upgrade" },
@@ -34,6 +38,8 @@ export class ProxyResolver extends OpenAPIRoute {
   async handle(context: AppContext) {
     const validated = await this.getValidatedData<typeof this.schema>();
 
+    const origin = validated.headers.origin.toLowerCase();
+    const connectingIP = validated.headers["cf-connecting-ip"].toLowerCase();
     const upgrade = validated.headers.upgrade.toLowerCase();
     const connection = validated.headers.connection.toLowerCase();
     if (upgrade !== "websocket" || !connection.includes("upgrade")) {
@@ -53,6 +59,21 @@ export class ProxyResolver extends OpenAPIRoute {
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
+
+app.use(
+  "*",
+  cors({
+    credentials: false,
+    allowMethods: ["GET"],
+    origin: ["*"],
+    allowHeaders: [
+      "upgrade",
+      "connection",
+      "sec-websocket-key",
+      "sec-websocket-version",
+    ],
+  }),
+);
 
 // Setup OpenAPI registry
 const openapi = fromHono(app, {
