@@ -4,7 +4,7 @@
   "main": "dist/index.js",
   "compatibility_date": "2026-04-10",
   "observability": {
-    "enabled": false,
+    "enabled": true,
   },
   "upload_source_maps": true,
   "compatibility_flags": ["nodejs_compat"],
