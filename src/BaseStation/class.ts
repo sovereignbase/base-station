@@ -1,7 +1,12 @@
 import { encode } from "@msgpack/msgpack";
 import { DurableObject } from "cloudflare:workers";
-import { ActorMessageHandler } from "@sovereignbase/actor-message-handler";
-import { blockIPAddress, generateIceServers } from "../.helpers";
+import { ActorMessageHandler } from "../ActorMessageHandler/class.js";
+import {
+  blockIPAddress,
+  fetchStripeCheckoutStatus,
+  fetchStripeInvoiceStatus,
+  generateIceServers,
+} from "../.helpers";
 import { BaseStationMessage } from "../.types";
 import Stripe from "stripe";
 
@@ -22,6 +27,7 @@ export class BaseStation extends DurableObject<Env> {
         this.ipAddress = request.headers.get("cf-connecting-ip") ?? "";
         this.clientId = new URL(request.url).pathname.slice(1)[0];
 
+        //VIOLATION HANDLER
         void ActorMessageHandler.addEventListener(
           "violation",
           async ({ detail }) => {
@@ -38,24 +44,47 @@ export class BaseStation extends DurableObject<Env> {
           },
         );
 
-        void ActorMessageHandler.addEventListener("backup", ({ detail }) => {
-          void this.env.RESOURCES.put(detail.id, detail.buffer);
+        //RESOURCE BACKUP HANDLER
+        void ActorMessageHandler.addEventListener(
+          "resourceBackup",
+          ({ detail }) => {
+            void this.env.RESOURCES.put(detail.id, detail.buffer);
+          },
+        );
+
+        //ICE SERVERS REQUEST HANDLER
+        void ActorMessageHandler.addEventListener("iceServers", async () => {
+          const iceServers = await generateIceServers(this.env);
+          void this.actor.send(
+            encode([
+              "station-client-response",
+              {
+                kind: "iceServers",
+                detail: iceServers,
+              } satisfies BaseStationMessage,
+            ]),
+          );
         });
 
+        // CHECKOUT STATUS REQUEST
         void ActorMessageHandler.addEventListener(
-          "transact",
+          "checkoutStatus",
           async ({ detail }) => {
-            switch (detail) {
-              case "iceServers": {
-                const iceServers = await generateIceServers(this.env);
-                void this.actor.send(
-                  encode({
-                    kind: "iceServers",
-                    detail: iceServers,
-                  } satisfies BaseStationMessage),
-                );
-              }
-            }
+            const checkoutStatus = await fetchStripeCheckoutStatus(
+              this.ctx,
+              this.env,
+              this.clientId,
+              detail.checkoutSessionId,
+            );
+            void this.actor.send(
+              encode([
+                "station-client-response",
+                {
+                  kind: "checkoutStatus",
+                  detail: checkoutStatus,
+                } satisfies BaseStationMessage,
+              ]),
+            );
           },
         );
       })(),

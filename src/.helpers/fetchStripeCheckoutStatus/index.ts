@@ -3,7 +3,7 @@ import type { AppContext, StripeCheckoutStatus } from "../../.types/index.js";
 import { fetchStripeSecretKey } from "../index.js";
 
 export async function fetchStripeCheckoutStatus(
-  ctx: AppContext["executionCtx"],
+  ctx: AppContext["executionCtx"] | DurableObjectState<{}>,
   env: AppContext["env"],
   clientId: OpaqueIdentifier,
   checkoutSessionId: string,

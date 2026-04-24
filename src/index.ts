@@ -2,7 +2,7 @@ import { z } from "zod";
 import { Hono } from "hono";
 import { fromHono, OpenAPIRoute } from "chanfana";
 import type { AppContext } from "./.types/index.js";
-import { fetchBillingData, isAllowedOrigin } from "./.helpers/index.js";
+import { fetchClientConfig, isAllowedOrigin } from "./.helpers/index.js";
 import { Cryptographic } from "@sovereignbase/cryptosuite";
 
 export class ProxyResolver extends OpenAPIRoute {
@@ -19,7 +19,7 @@ export class ProxyResolver extends OpenAPIRoute {
         "sec-websocket-version": z.literal("13"),
       }),
       params: z.object({
-        id: z.string().min(64),
+        clientId: z.string().min(64),
       }),
     },
     responses: {
@@ -40,12 +40,16 @@ export class ProxyResolver extends OpenAPIRoute {
 
   async handle(context: AppContext) {
     const validated = await this.getValidatedData<typeof this.schema>();
-    const id = validated.params.id;
+    const clientId = validated.params.clientId;
 
-    const billing = await fetchBillingData(context, id);
+    const billing = await fetchClientConfig(
+      context.env,
+      context.executionCtx,
+      clientId,
+    );
     if (!billing) return context.text("Not found", 404);
 
-    if (!Cryptographic.identifier.validate(billing.id))
+    if (!Cryptographic.identifier.validate(billing.clientId))
       return context.text("Not found", 404);
 
     const origin = validated.headers.origin.toLowerCase();
@@ -70,7 +74,7 @@ const app = new Hono<{ Bindings: Env }>();
 const openapi = fromHono(app);
 
 // Register OpenAPI endpoints
-openapi.get("/:id", ProxyResolver);
+openapi.get("/:clientId", ProxyResolver);
 
 // Export the Hono app
 export default app;

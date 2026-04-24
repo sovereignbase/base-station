@@ -10,7 +10,7 @@ let baseKey: Base64URLString | undefined;
 
 export async function fetchStripeSecretKey(
   env: AppContext["env"],
-  ctx: AppContext["executionCtx"],
+  ctx: AppContext["executionCtx"] | DurableObjectState<{}>,
   clientId: OpaqueIdentifier,
 ): Promise<string | false> {
   const objectKey = `/stripe/${clientId}`;
