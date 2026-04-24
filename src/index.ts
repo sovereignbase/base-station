@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { fromHono, OpenAPIRoute } from "chanfana";
 import type { AppContext } from "./.types/index.js";
 import { fetchBillingData, isAllowedOrigin } from "./.helpers/index.js";
+import { Cryptographic } from "@sovereignbase/cryptosuite";
 
 export class ProxyResolver extends OpenAPIRoute {
   schema = {
@@ -44,6 +45,9 @@ export class ProxyResolver extends OpenAPIRoute {
     const billing = await fetchBillingData(context, id);
     if (!billing) return context.text("Not found", 404);
 
+    if (!Cryptographic.identifier.validate(billing.id))
+      return context.text("Not found", 404);
+
     const origin = validated.headers.origin.toLowerCase();
     if (!isAllowedOrigin(origin, billing.allowedOrigins))
       return context.text("Not found", 404);
@@ -63,9 +67,7 @@ export class ProxyResolver extends OpenAPIRoute {
 const app = new Hono<{ Bindings: Env }>();
 
 // Setup OpenAPI registry
-const openapi = fromHono(app, {
-  docs_url: "/",
-});
+const openapi = fromHono(app);
 
 // Register OpenAPI endpoints
 openapi.get("/:id", ProxyResolver);
@@ -73,4 +75,3 @@ openapi.get("/:id", ProxyResolver);
 // Export the Hono app
 export default app;
 export { BaseStation } from "./BaseStation/class.js";
-export { ServiceProxy } from "./ServiceProxy/class.js";

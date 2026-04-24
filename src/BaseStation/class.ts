@@ -1,6 +1,8 @@
 import { encode } from "@msgpack/msgpack";
 import { DurableObject } from "cloudflare:workers";
 import { ActorMessageHandler } from "@sovereignbase/actor-message-handler";
+import { generateIceServers } from "../.helpers";
+import { BaseStationMessage } from "../.types";
 
 export class BaseStation extends DurableObject<Env> {
   private ipAddress: string;
@@ -21,6 +23,8 @@ export class BaseStation extends DurableObject<Env> {
         void ActorMessageHandler.addEventListener(
           "violation",
           async ({ detail }) => {
+            void this.actor.close();
+
             const token = await this.env.IP_BLOCK_TOKEN.get();
 
             const res = await fetch(
@@ -49,23 +53,36 @@ export class BaseStation extends DurableObject<Env> {
             void (await this.ctx.storage.setAlarm(Date.now() + 60_000));
           },
         );
+
+        void ActorMessageHandler.addEventListener("backup", ({ detail }) => {
+          void this.env.RESOURCES.put(detail.id, detail.buffer);
+        });
+
+        void ActorMessageHandler.addEventListener(
+          "transact",
+          async ({ detail }) => {
+            switch (detail) {
+              case "iceServers": {
+                const iceServers = await generateIceServers(this.env);
+                void this.actor.send(
+                  encode({
+                    kind: "iceServers",
+                    detail: iceServers,
+                  } satisfies BaseStationMessage),
+                );
+              }
+            }
+          },
+        );
       })(),
     );
 
     return new Response(null, { status: 101, webSocket: clientWebSocket });
   }
 
-  async resourceMessage(message: unknown) {
-    this.actor.send(encode(message));
+  async signal(message: unknown) {
+    void this.actor.send(encode(message));
   }
-
-  async webSocketMessage(sender: WebSocket, message: ArrayBuffer) {
-    void ActorMessageHandler.ingest(message);
-  }
-
-  webSocketClose(socket: WebSocket) {}
-
-  webSocketError(socket: WebSocket, error: unknown) {}
 
   async alarm() {
     const token = await this.env.IP_BLOCK_TOKEN.get();
@@ -83,5 +100,13 @@ export class BaseStation extends DurableObject<Env> {
     );
 
     void this.ctx.storage.delete("ruleId");
+  }
+
+  webSocketClose(socket: WebSocket) {}
+
+  webSocketError(socket: WebSocket, error: unknown) {}
+
+  webSocketMessage(sender: WebSocket, message: ArrayBuffer) {
+    void ActorMessageHandler.ingest(message);
   }
 }

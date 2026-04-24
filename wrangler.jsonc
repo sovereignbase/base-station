@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "cloudflare-workers-api",
+  "name": "base-station-v1",
   "main": "dist/index.js",
   "compatibility_date": "2026-04-10",
   "observability": {
@@ -28,6 +28,11 @@
       "store_id": "3dca4165b3fa04ce8a41977479759c55",
       "secret_name": "IP_BLOCK_TOKEN",
       "binding": "IP_BLOCK_TOKEN",
+    },
+    {
+      "store_id": "3dca4165b3fa04ce8a41977479759c55",
+      "secret_name": "SUPER_SECRET_KEY",
+      "binding": "SUPER_SECRET_KEY",
     },
   ],
   "durable_objects": {
