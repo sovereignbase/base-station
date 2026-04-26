@@ -48,7 +48,11 @@ export class BaseStation extends DurableObject<Env> {
         void ActorMessageHandler.addEventListener(
           "resourceBackup",
           ({ detail }) => {
-            void this.env.RESOURCES.put(detail.id, detail.buffer);
+            void this.env.RESOURCES.put(`/${detail.id}`, detail.buffer, {
+              httpMetadata: {
+                contentType: "application/msgpack",
+              },
+            });
           },
         );
 

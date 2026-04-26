@@ -45,6 +45,7 @@ export type ActorMessage =
       detail: {
         id: OpaqueIdentifier;
         iv: Uint8Array;
+        salt: Uint8Array;
         ciphertext: ArrayBuffer;
       };
     }

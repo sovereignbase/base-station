@@ -48,12 +48,13 @@ export class ActorMessageHandler {
         if (
           !Object.hasOwn(detail, "id") ||
           !Object.hasOwn(detail, "iv") ||
+          !Object.hasOwn(detail, "salt") ||
           !Object.hasOwn(detail, "ciphertext")
         )
           return void this.eventTarget.dispatchEvent(
             new CustomEvent("violation", { detail: "Wrong message shape" }),
           );
-        const { id, iv, ciphertext } = detail;
+        const { id, iv, salt, ciphertext } = detail;
         if (
           !Cryptographic.identifier.validate(id) ||
           !(iv instanceof Uint8Array) ||
@@ -65,7 +66,7 @@ export class ActorMessageHandler {
 
         return void this.eventTarget.dispatchEvent(
           new CustomEvent("backup", {
-            detail: { id, buffer: encode({ iv, ciphertext }) },
+            detail: { id, buffer: encode({ iv, salt, ciphertext }) },
           }),
         );
       }
