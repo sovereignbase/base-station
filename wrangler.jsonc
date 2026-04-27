@@ -38,7 +38,7 @@
   ],
   "durable_objects": {
     "bindings": [
-      { "class_name": "UserProxy", "name": "USER_PROXY" },
+      { "class_name": "BaseStation", "name": "BASE_STATION" },
       { "class_name": "ServiceProxy", "name": "SERVICE_PROXY" },
       { "class_name": "ResourceProxy", "name": "RESOURCE_PROXY" },
     ],

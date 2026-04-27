@@ -6,8 +6,8 @@ import {
   fetchStripeCheckoutStatus,
   fetchStripeInvoiceStatus,
   generateIceServers,
-} from "../.helpers";
-import { BaseStationMessage } from "../.types";
+} from "../.helpers/index.js";
+import { BaseStationMessage } from "../.types/index.js";
 import Stripe from "stripe";
 
 export class BaseStation extends DurableObject<Env> {
