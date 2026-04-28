@@ -3,7 +3,7 @@ import type {
   BaseStationMessage,
   BaseStationMessageHandlerEventListenerFor,
   BaseStationMessageHandlerEventMap,
-} from '../.types/index.js'
+} from '../.types/types.js'
 
 /**
  * ANBS base station message event target.
@@ -13,7 +13,7 @@ import type {
  * dispatches typed DOM `CustomEvent` instances for each accepted message kind.
  */
 export class BaseStationMessageHandler {
-  private readonly eventTarget = new EventTarget()
+  private static readonly eventTarget = new EventTarget()
 
   /**
    * Decodes and dispatches a base station response message.
@@ -22,7 +22,7 @@ export class BaseStationMessageHandler {
    *
    * @param message The MessagePack-encoded base station message.
    */
-  ingest(message: ArrayBuffer) {
+  static ingest(message: ArrayBuffer) {
     if (!(message instanceof ArrayBuffer)) return
 
     let decoded = undefined
@@ -102,7 +102,7 @@ export class BaseStationMessageHandler {
    * @param listener The callback or listener object that receives the event.
    * @param options Options that control listener registration.
    */
-  addEventListener<K extends keyof BaseStationMessageHandlerEventMap>(
+  static addEventListener<K extends keyof BaseStationMessageHandlerEventMap>(
     type: K,
     listener: BaseStationMessageHandlerEventListenerFor<K> | null,
     options?: boolean | AddEventListenerOptions
@@ -121,7 +121,7 @@ export class BaseStationMessageHandler {
    * @param listener The callback or listener object to remove.
    * @param options Options that identify the listener registration.
    */
-  removeEventListener<K extends keyof BaseStationMessageHandlerEventMap>(
+  static removeEventListener<K extends keyof BaseStationMessageHandlerEventMap>(
     type: K,
     listener: BaseStationMessageHandlerEventListenerFor<K> | null,
     options?: boolean | EventListenerOptions

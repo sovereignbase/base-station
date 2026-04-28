@@ -1,5 +1,5 @@
 import { OpaqueIdentifier } from '@sovereignbase/cryptosuite'
-import type { ClientConfig, AppContext } from '../../.types/index.js'
+import type { ClientConfig, AppContext } from '../../.types/types.js'
 
 /**
  * Fetches the persisted client configuration for an ANBS base station client.

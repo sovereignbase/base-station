@@ -4,7 +4,7 @@ import type {
   BaseStationClientMessage,
   BaseStationClientMessageHandlerEventMap,
   BaseStationClientMessageHandlerEventListenerFor,
-} from '../.types/index.js'
+} from '../.types/types.js'
 
 /**
  * ANBS base station client message event target.
@@ -79,7 +79,7 @@ export class BaseStationClientMessageHandler {
           })
         )
       }
-      case 'iceServers': {
+      case 'iceServersGet': {
         const detail = Object.hasOwn(decoded, 'detail') ? decoded.detail : {}
         if (
           !detail ||
@@ -91,10 +91,10 @@ export class BaseStationClientMessageHandler {
           )
 
         return void this.eventTarget.dispatchEvent(
-          new CustomEvent('iceServers', { detail })
+          new CustomEvent('iceServersGet', { detail })
         )
       }
-      case 'invoiceStatus': {
+      case 'invoiceStatusGet': {
         const { detail } = decoded
         if (
           !detail ||
@@ -108,10 +108,10 @@ export class BaseStationClientMessageHandler {
           )
 
         return void this.eventTarget.dispatchEvent(
-          new CustomEvent('invoiceStatus', { detail })
+          new CustomEvent('invoiceStatusGet', { detail })
         )
       }
-      case 'checkoutStatus': {
+      case 'checkoutStatusGet': {
         const { detail } = decoded
         if (
           !detail ||
@@ -125,7 +125,7 @@ export class BaseStationClientMessageHandler {
           )
 
         return void this.eventTarget.dispatchEvent(
-          new CustomEvent('checkoutStatus', { detail })
+          new CustomEvent('checkoutStatusGet', { detail })
         )
       }
     }

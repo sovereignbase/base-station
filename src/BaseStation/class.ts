@@ -7,7 +7,7 @@ import {
   fetchStripeInvoiceStatus,
   generateIceServers,
 } from '../.helpers/index.js'
-import { BaseStationMessage } from '../.types/index.js'
+import { BaseStationMessage } from '../.types/types.js'
 import Stripe from 'stripe'
 
 /**

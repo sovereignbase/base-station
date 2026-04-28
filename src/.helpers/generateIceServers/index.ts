@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 
-import { AppContext } from '../../.types/index.js'
+import { AppContext } from '../../.types/types.js'
 
 /**
  * Generates Cloudflare Calls TURN credentials for WebRTC clients.

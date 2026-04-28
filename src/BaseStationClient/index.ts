@@ -1,13 +1,13 @@
 import { encode } from '@msgpack/msgpack'
 import type {
   BaseStationMessage,
-  BaseStationClientMessage,
   BaseStationClientTransactMessage,
   BaseStationClientEventListenerFor,
   BaseStationClientPendingTransact,
   BaseStationClientTransactOptions,
   BaseStationClientEventMap,
-} from '../.types/index.js'
+  BaseStationClientInvokeMessage,
+} from '../.types/types.js'
 import { BaseStationMessageHandler } from '../BaseStationMessageHandler/class.js'
 
 /**
@@ -19,11 +19,10 @@ import { BaseStationMessageHandler } from '../BaseStationMessageHandler/class.js
  */
 export class BaseStationClient {
   private readonly eventTarget = new EventTarget()
-  private readonly messageHandler = new BaseStationMessageHandler()
   private readonly webSocketUrl: string
   private webSocket: WebSocket | null = null
   private isClosed: boolean = false
-  private readonly pendingfetchs = new Map<
+  private readonly pendingTransacts = new Map<
     string,
     BaseStationClientPendingTransact<BaseStationMessage>
   >()
@@ -52,11 +51,11 @@ export class BaseStationClient {
     socket.binaryType = 'arraybuffer'
     this.webSocket = socket
 
-    this.messageHandler.addEventListener('iceServers', ({ detail }) => {
+    BaseStationMessageHandler.addEventListener('iceServers', ({ detail }) => {
       const id = detail.detail.id
-      const pending = id ? this.pendingfetchs.get(id) : undefined
+      const pending = this.pendingTransacts.get(id)
       if (id && pending) {
-        void this.pendingfetchs.delete(id)
+        void this.pendingTransacts.delete(id)
         void pending.cleanup()
         void pending.resolve(detail)
         return
@@ -67,48 +66,54 @@ export class BaseStationClient {
       )
     })
 
-    this.messageHandler.addEventListener('checkoutStatus', ({ detail }) => {
-      const id = detail.detail.id
-      const pending = id ? this.pendingfetchs.get(id) : undefined
-      if (id && pending) {
-        void this.pendingfetchs.delete(id)
-        void pending.cleanup()
-        void pending.resolve(detail)
-        return
+    BaseStationMessageHandler.addEventListener(
+      'checkoutStatus',
+      ({ detail }) => {
+        const id = detail.detail.id
+        const pending = id ? this.pendingTransacts.get(id) : undefined
+        if (id && pending) {
+          void this.pendingTransacts.delete(id)
+          void pending.cleanup()
+          void pending.resolve(detail)
+          return
+        }
+
+        void this.eventTarget.dispatchEvent(
+          new CustomEvent('message', { detail })
+        )
       }
+    )
 
-      void this.eventTarget.dispatchEvent(
-        new CustomEvent('message', { detail })
-      )
-    })
+    BaseStationMessageHandler.addEventListener(
+      'invoiceStatus',
+      ({ detail }) => {
+        const id = detail.detail.id
+        const pending = id ? this.pendingTransacts.get(id) : undefined
+        if (id && pending) {
+          void this.pendingTransacts.delete(id)
+          void pending.cleanup()
+          void pending.resolve(detail)
+          return
+        }
 
-    this.messageHandler.addEventListener('invoiceStatus', ({ detail }) => {
-      const id = detail.detail.id
-      const pending = id ? this.pendingfetchs.get(id) : undefined
-      if (id && pending) {
-        void this.pendingfetchs.delete(id)
-        void pending.cleanup()
-        void pending.resolve(detail)
-        return
+        void this.eventTarget.dispatchEvent(
+          new CustomEvent('message', { detail })
+        )
       }
-
-      void this.eventTarget.dispatchEvent(
-        new CustomEvent('message', { detail })
-      )
-    })
+    )
 
     socket.onclose = () => {
       if (this.webSocket === socket) this.webSocket = null
 
-      for (const pending of this.pendingfetchs.values()) {
+      for (const pending of this.pendingTransacts.values()) {
         void pending.cleanup()
         void pending.reject(new Error('Station client closed'))
       }
-      void this.pendingfetchs.clear()
+      void this.pendingTransacts.clear()
     }
 
     socket.onmessage = (event: MessageEvent<ArrayBuffer>) => {
-      void this.messageHandler.ingest(event.data)
+      void BaseStationMessageHandler.ingest(event.data)
     }
   }
 
@@ -120,7 +125,7 @@ export class BaseStationClient {
    *
    * @param message The client message to MessagePack-encode and send.
    */
-  invoke(message: BaseStationClientMessage) {
+  invoke(message: BaseStationClientInvokeMessage) {
     if (this.isClosed) return
 
     if (!this.webSocket || this.webSocket.readyState !== WebSocket.OPEN) return
@@ -143,11 +148,10 @@ export class BaseStationClient {
    * `false` when the request cannot be issued.
    */
   transact(
-    message: BaseStationClientTransactMessage,
+    message: Omit<BaseStationClientTransactMessage, 'id'>,
     options: BaseStationClientTransactOptions = {}
   ): Promise<BaseStationMessage | false> {
     if (this.isClosed) return Promise.resolve(false)
-
     const id = globalThis.crypto.randomUUID()
     const { signal, ttlMs } = options
 
@@ -168,56 +172,36 @@ export class BaseStationClient {
       }
 
       const handleAbort = () => {
-        void this.pendingfetchs.delete(id)
+        void this.pendingTransacts.delete(id)
         if (timeoutId) void clearTimeout(timeoutId)
         void signal?.removeEventListener('abort', handleAbort)
 
         void reject(abortReason())
       }
 
-      void this.pendingfetchs.set(id, {
+      void this.pendingTransacts.set(id, {
         resolve,
         reject,
         cleanup: () => {
-          if (timeoutId) clearTimeout(timeoutId)
-          signal?.removeEventListener('abort', handleAbort)
+          if (timeoutId) void clearTimeout(timeoutId)
+          void signal?.removeEventListener('abort', handleAbort)
         },
       })
       void signal?.addEventListener('abort', handleAbort, { once: true })
 
       if (ttlMs) {
         timeoutId = setTimeout(() => {
-          void this.pendingfetchs.delete(id)
+          void this.pendingTransacts.delete(id)
           void signal?.removeEventListener('abort', handleAbort)
           void resolve(false)
         }, ttlMs)
       }
 
       try {
-        switch (message.kind) {
-          case 'iceServers': {
-            void this.webSocket.send(
-              encode({
-                ...message,
-                detail: { ...message.detail, id },
-              })
-            )
-            break
-          }
-          case 'checkoutStatus':
-          case 'invoiceStatus': {
-            void this.webSocket.send(
-              encode({
-                ...message,
-                detail: { ...message.detail, id },
-              })
-            )
-            break
-          }
-        }
+        void this.webSocket.send(encode({ id, ...message }))
       } catch {
-        const pending = this.pendingfetchs.get(id)
-        void this.pendingfetchs.delete(id)
+        const pending = this.pendingTransacts.get(id)
+        void this.pendingTransacts.delete(id)
         void pending?.cleanup()
         void resolve(false)
       }
@@ -234,11 +218,11 @@ export class BaseStationClient {
     } catch {}
 
     this.webSocket = null
-    for (const pending of this.pendingfetchs.values()) {
+    for (const pending of this.pendingTransacts.values()) {
       void pending.cleanup()
       void pending.reject(new Error('Station client closed'))
     }
-    void this.pendingfetchs.clear()
+    void this.pendingTransacts.clear()
   }
 
   /**
@@ -280,3 +264,7 @@ export class BaseStationClient {
     )
   }
 }
+new BaseStationClient('').transact({
+  kind: 'checkoutStatusGet',
+  detail: { invoiceId: '' },
+})

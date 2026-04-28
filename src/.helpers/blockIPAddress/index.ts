@@ -1,4 +1,4 @@
-import { AppContext } from '../../.types'
+import { AppContext } from '../../.types/types'
 
 /**
  * Creates a Cloudflare access rule that blocks an IP address.

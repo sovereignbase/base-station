@@ -1,5 +1,5 @@
 import { OpaqueIdentifier } from '@sovereignbase/cryptosuite'
-import type { AppContext, StripeInvoiceStatus } from '../../.types/index.js'
+import type { AppContext, StripeInvoiceStatus } from '../../.types/types.js'
 import { fetchStripeSecretKey } from '../index.js'
 
 /**

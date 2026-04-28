@@ -3,7 +3,7 @@ import {
   type OpaqueIdentifier,
 } from '@sovereignbase/cryptosuite'
 import { Bytes } from '@sovereignbase/bytecodec'
-import type { AppContext } from '../../.types/index.js'
+import type { AppContext } from '../../.types/types.js'
 import { decode } from '@msgpack/msgpack'
 
 let baseKey: Base64URLString | undefined

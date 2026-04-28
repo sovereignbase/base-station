@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { OpenAPIRoute } from 'chanfana'
-import type { AppContext } from '../.types/index.js'
+import type { AppContext } from '../.types/types.js'
 import { fetchClientConfig, isAllowedOrigin } from '../.helpers/index.js'
 import { Cryptographic } from '@sovereignbase/cryptosuite'
 
