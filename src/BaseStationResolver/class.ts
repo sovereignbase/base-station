@@ -41,11 +41,16 @@ export class BaseStationResolver extends OpenAPIRoute {
     const validated = await this.getValidatedData<typeof this.schema>();
     const clientId = validated.params.clientId;
 
+    const stub = context.env.BASE_STATION.get(
+      context.env.BASE_STATION.newUniqueId(),
+    );
+
     const billing = await fetchClientConfig(
       context.env,
       context.executionCtx,
       clientId,
     );
+
     if (!billing) return context.text("Not found", 404);
 
     if (!Cryptographic.identifier.validate(billing.clientId))
@@ -60,8 +65,6 @@ export class BaseStationResolver extends OpenAPIRoute {
     if (upgrade !== "websocket" || !connection.includes("upgrade"))
       return context.text("Not found", 404);
 
-    return context.env.BASE_STATION.get(
-      context.env.BASE_STATION.newUniqueId(),
-    ).fetch(context.req.raw);
+    return stub.fetch(context.req.raw);
   }
 }

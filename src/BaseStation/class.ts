@@ -1,6 +1,6 @@
 import { encode } from "@msgpack/msgpack";
 import { DurableObject } from "cloudflare:workers";
-import { ActorMessageHandler } from "../BaseStationClientMessageHandler/class.js";
+import { BaseStationClientMessageHandler } from "../BaseStationClientMessageHandler/class.js";
 import {
   blockIPAddress,
   fetchStripeCheckoutStatus,
@@ -23,29 +23,21 @@ export class BaseStation extends DurableObject<Env> {
     void this.ctx.acceptWebSocket(serverWebSocket);
 
     void this.ctx.waitUntil(
-      (async () => {
+      void (async () => {
         this.ipAddress = request.headers.get("cf-connecting-ip") ?? "";
         this.clientId = new URL(request.url).pathname.slice(1)[0];
 
         //VIOLATION HANDLER
-        void ActorMessageHandler.addEventListener(
+        void BaseStationClientMessageHandler.addEventListener(
           "violation",
           async ({ detail }) => {
             void this.actor.close();
-
-            const ruleId = await blockIPAddress(
-              this.env,
-              this.ipAddress,
-              detail,
-            );
-            void (await this.ctx.storage.put("ruleId", ruleId));
-
-            void (await this.ctx.storage.setAlarm(Date.now() + 60_000));
+            void this.rateLimitBadRequest(this.ipAddress, detail);
           },
         );
 
         //RESOURCE BACKUP HANDLER
-        void ActorMessageHandler.addEventListener(
+        void BaseStationClientMessageHandler.addEventListener(
           "resourceBackup",
           ({ detail }) => {
             void this.env.CIPHER_STORE.put(`/${detail.id}`, detail.buffer, {
@@ -57,7 +49,7 @@ export class BaseStation extends DurableObject<Env> {
         );
 
         //ICE SERVERS REQUEST HANDLER
-        void ActorMessageHandler.addEventListener(
+        void BaseStationClientMessageHandler.addEventListener(
           "iceServers",
           async ({ detail }) => {
             const iceServers = await generateIceServers(this.env);
@@ -74,7 +66,7 @@ export class BaseStation extends DurableObject<Env> {
         );
 
         // CHECKOUT STATUS REQUEST
-        void ActorMessageHandler.addEventListener(
+        void BaseStationClientMessageHandler.addEventListener(
           "checkoutStatus",
           async ({ detail }) => {
             const checkoutStatus = await fetchStripeCheckoutStatus(
@@ -96,7 +88,7 @@ export class BaseStation extends DurableObject<Env> {
         );
 
         // INVOICE STATUS REQUEST
-        void ActorMessageHandler.addEventListener(
+        void BaseStationClientMessageHandler.addEventListener(
           "invoiceStatus",
           async ({ detail }) => {
             const invoiceStatus = await fetchStripeInvoiceStatus(
@@ -126,12 +118,19 @@ export class BaseStation extends DurableObject<Env> {
     void this.actor.send(encode(message));
   }
 
+  async rateLimitBadRequest(ipAddress: string, detail: string = "Bad request") {
+    const ruleId = await blockIPAddress(this.env, ipAddress, detail);
+    void (await this.ctx.storage.put("ruleId", ruleId));
+
+    void (await this.ctx.storage.setAlarm(Date.now() + 60_000));
+  }
+
   async alarm() {
     const token = await this.env.IP_BLOCK_TOKEN.get();
 
     const ruleId = await this.ctx.storage.get("ruleId");
 
-    void fetch(
+    void (await fetch(
       `https://api.cloudflare.com/client/v4/zones/${this.env.ZONE_ID}/firewall/access_rules/rules/${ruleId}`,
       {
         method: "DELETE",
@@ -139,9 +138,9 @@ export class BaseStation extends DurableObject<Env> {
           Authorization: `Bearer ${token}`,
         },
       },
-    );
+    ));
 
-    void this.ctx.storage.delete("ruleId");
+    void (await this.ctx.storage.delete("ruleId"));
   }
 
   webSocketClose(socket: WebSocket) {}
@@ -149,6 +148,6 @@ export class BaseStation extends DurableObject<Env> {
   webSocketError(socket: WebSocket, error: unknown) {}
 
   webSocketMessage(sender: WebSocket, message: ArrayBuffer) {
-    void ActorMessageHandler.ingest(message);
+    void BaseStationClientMessageHandler.ingest(message);
   }
 }
