@@ -15,5 +15,5 @@ export default app;
 export { BaseStationResolver };
 export { BaseStation } from "./BaseStation/class.js";
 export { BaseStationClient } from "./BaseStationClient/index.js";
-export { ActorMessageHandler } from "./ActorMessageHandler/class.js";
+export { ActorMessageHandler } from "./BaseStationClientMessageHandler/class.js";
 export { BaseStationMessageHandler } from "./BaseStationMessageHandler/class.js";

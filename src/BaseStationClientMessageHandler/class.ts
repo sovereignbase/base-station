@@ -1,15 +1,15 @@
 import { encode, decode } from "@msgpack/msgpack";
 import { Cryptographic } from "@sovereignbase/cryptosuite";
 import type {
-  ActorMessage,
-  ActorMessageHandlerEventMap,
-  ActorMessageHandlerEventListenerFor,
+  BaseStationClientMessage,
+  BaseStationClientMessageHandlerEventMap,
+  BaseStationClientMessageHandlerEventListenerFor,
 } from "../.types/index.js";
 
 /**
  * ANBS base station client message handler.
  */
-export class ActorMessageHandler {
+export class BaseStationClientMessageHandler {
   private static readonly eventTarget = new EventTarget();
 
   /**
@@ -25,7 +25,7 @@ export class ActorMessageHandler {
     let decoded = undefined;
 
     try {
-      decoded = decode(message) as ActorMessage;
+      decoded = decode(message) as BaseStationClientMessage;
     } catch {
       return void this.eventTarget.dispatchEvent(
         new CustomEvent("violation", { detail: "Wrong message encoding" }),
@@ -129,9 +129,11 @@ export class ActorMessageHandler {
    * @param listener The listener callback.
    * @param options The listener options.
    */
-  static addEventListener<K extends keyof ActorMessageHandlerEventMap>(
+  static addEventListener<
+    K extends keyof BaseStationClientMessageHandlerEventMap,
+  >(
     type: K,
-    listener: ActorMessageHandlerEventListenerFor<K> | null,
+    listener: BaseStationClientMessageHandlerEventListenerFor<K> | null,
     options?: boolean | AddEventListenerOptions,
   ): void {
     void this.eventTarget.addEventListener(
@@ -146,9 +148,11 @@ export class ActorMessageHandler {
    * @param listener The listener to remove.
    * @param options The listener options.
    */
-  static removeEventListener<K extends keyof ActorMessageHandlerEventMap>(
+  static removeEventListener<
+    K extends keyof BaseStationClientMessageHandlerEventMap,
+  >(
     type: K,
-    listener: ActorMessageHandlerEventListenerFor<K> | null,
+    listener: BaseStationClientMessageHandlerEventListenerFor<K> | null,
     options?: boolean | EventListenerOptions,
   ): void {
     void this.eventTarget.removeEventListener(

@@ -1,6 +1,6 @@
 import { encode } from "@msgpack/msgpack";
 import { DurableObject } from "cloudflare:workers";
-import { ActorMessageHandler } from "../ActorMessageHandler/class.js";
+import { ActorMessageHandler } from "../BaseStationClientMessageHandler/class.js";
 import {
   blockIPAddress,
   fetchStripeCheckoutStatus,

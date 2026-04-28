@@ -46,9 +46,9 @@ export type StripeInvoiceStatus =
   | null;
 
 /**
- * Decoded actor protocol message.
+ * Decoded BaseStationClient protocol message.
  */
-export type ActorMessage =
+export type BaseStationClientMessage =
   | {
       kind: "resourceBackup";
       detail: {
@@ -66,7 +66,7 @@ export type ActorMessage =
     };
 
 export type BaseStationClientTransactMessage = Extract<
-  ActorMessage,
+  BaseStationClientMessage,
   | { kind: "iceServers" }
   | { kind: "invoiceStatus" }
   | { kind: "checkoutStatus" }
@@ -75,7 +75,7 @@ export type BaseStationClientTransactMessage = Extract<
 /**
  * Maps event names to their `CustomEvent.detail` payloads.
  */
-export type ActorMessageHandlerEventMap = {
+export type BaseStationClientMessageHandlerEventMap = {
   violation: string;
   resourceBackup: {
     id: OpaqueIdentifier;
@@ -87,20 +87,24 @@ export type ActorMessageHandlerEventMap = {
 };
 
 /**
- * Actor message handler event listener.
+ * BaseStationClient message handler event listener.
  */
-export type ActorMessageHandlerEventListener<
-  K extends keyof ActorMessageHandlerEventMap,
+export type BaseStationClientMessageHandlerEventListener<
+  K extends keyof BaseStationClientMessageHandlerEventMap,
 > =
-  | ((event: CustomEvent<ActorMessageHandlerEventMap[K]>) => void)
-  | { handleEvent(event: CustomEvent<ActorMessageHandlerEventMap[K]>): void };
+  | ((event: CustomEvent<BaseStationClientMessageHandlerEventMap[K]>) => void)
+  | {
+      handleEvent(
+        event: CustomEvent<BaseStationClientMessageHandlerEventMap[K]>,
+      ): void;
+    };
 
 /**
  * Resolves an event name to its listener type.
  */
-export type ActorMessageHandlerEventListenerFor<K extends string> =
-  K extends keyof ActorMessageHandlerEventMap ?
-    ActorMessageHandlerEventListener<K>
+export type BaseStationClientMessageHandlerEventListenerFor<K extends string> =
+  K extends keyof BaseStationClientMessageHandlerEventMap ?
+    BaseStationClientMessageHandlerEventListener<K>
   : EventListenerOrEventListenerObject;
 
 /////////////////////////////////////////////////////
