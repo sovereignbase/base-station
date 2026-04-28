@@ -113,7 +113,6 @@ export class BaseStation extends DurableObject<Env> {
             void this.actor.send(
               encode({
                 id: detail.id,
-
                 kind: 'invoiceStatus',
                 detail: {
                   invoiceStatus,

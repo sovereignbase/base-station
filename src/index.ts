@@ -20,7 +20,7 @@ openapi.get('/:clientId', BaseStationResolver)
 export default app
 export { BaseStationResolver }
 export { BaseStation } from './BaseStation/class.js'
-export { BaseStationClient } from './BaseStationClient/index.js'
+export { BaseStationClient } from './BaseStationClient/class.js'
 export { BaseStationMessageHandler } from './BaseStationMessageHandler/class.js'
 export { BaseStationClientMessageHandler } from './BaseStationClientMessageHandler/class.js'
 export type * from './.types/types.js'
