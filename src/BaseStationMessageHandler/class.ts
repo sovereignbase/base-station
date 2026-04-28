@@ -5,6 +5,9 @@ import type {
   BaseStationMessageHandlerEventMap,
 } from "../.types/index.js";
 
+/**
+ * ANBS base station message handler.
+ */
 export class BaseStationMessageHandler {
   private readonly eventTarget = new EventTarget();
 

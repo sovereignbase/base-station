@@ -7,7 +7,7 @@ import type {
 } from "../.types/index.js";
 
 /**
- * ANBS actor message handler.
+ * ANBS base station client message handler.
  */
 export class ActorMessageHandler {
   private static readonly eventTarget = new EventTarget();
