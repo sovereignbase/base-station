@@ -19,7 +19,10 @@ const apache2Banner = [
 ].join('\n')
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: {
+    index: 'src/index.ts',
+    client: 'src/BaseStationClient/class.ts',
+  },
   format: ['esm', 'cjs'],
   outDir: 'dist',
   platform: 'neutral',
