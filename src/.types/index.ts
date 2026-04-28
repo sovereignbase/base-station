@@ -86,19 +86,15 @@ export type ActorMessageHandlerEventListenerFor<K extends string> =
 
 /////////////////////////////////////////////////////
 
-export type BaseStationClientEventMap<T> = {
-  message: CustomEvent<T>;
-  open: Event;
-  close: Event;
-  error: Event;
+export type BaseStationClientEventMap = {
+  message: CustomEvent<BaseStationMessage>;
 };
 
 export type BaseStationClientEventListenerFor<
-  T,
-  K extends keyof BaseStationClientEventMap<T>,
+  K extends keyof BaseStationClientEventMap,
 > =
-  | ((event: BaseStationClientEventMap<T>[K]) => void)
-  | { handleEvent(event: BaseStationClientEventMap<T>[K]): void };
+  | ((event: BaseStationClientEventMap[K]) => void)
+  | { handleEvent(event: BaseStationClientEventMap[K]): void };
 
 export type BaseStationClientRemoteMessageShape<T> =
   | T

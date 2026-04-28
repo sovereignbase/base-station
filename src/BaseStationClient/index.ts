@@ -1,5 +1,7 @@
 import { encode, decode } from "@msgpack/msgpack";
 import type {
+  ActorMessage,
+  BaseStationMessage,
   BaseStationClientEventListenerFor,
   BaseStationClientPendingTransact,
   BaseStationClientTransactOptions,
@@ -7,29 +9,28 @@ import type {
 } from "../.types/index.js";
 
 /**
- * Represents a base station client that coordinates local tab messaging and an opportunistic base station transport.
+ * Represents a base station client that sends messages over a WebSocket transport.
  *
- * @template T The application message shape.
  */
-export class BaseStationClient<T extends Record<string, unknown>> {
+export class BaseStationClient {
   private readonly eventTarget = new EventTarget();
   private readonly webSocketUrl: string;
   private webSocket: WebSocket | null = null;
   private isClosed: boolean = false;
   private readonly pendingfetchs = new Map<
     string,
-    BaseStationClientPendingTransact<T>
+    BaseStationClientPendingTransact<BaseStationMessage>
   >();
 
   /**
    * Initializes a new {@link BaseStationClient} instance.
    *
-   * @param webSocketUrl The base station WebSocket URL. When omitted, the instance operates in local-only mode.
+   * @param webSocketUrl The base station WebSocket URL.
    */
-  constructor(webSocketUrl: string = "") {
+  constructor(webSocketUrl: string) {
     this.webSocketUrl = webSocketUrl;
 
-    if (!this.webSocketUrl) return;
+    if (!this.webSocketUrl) throw new Error("");
 
     let socket: WebSocket;
     try {
@@ -41,24 +42,14 @@ export class BaseStationClient<T extends Record<string, unknown>> {
     socket.binaryType = "arraybuffer";
     this.webSocket = socket;
 
-    socket.onopen = () => {
-      this.eventTarget.dispatchEvent(new Event("open"));
-    };
-
-    socket.onerror = () => {
-      this.eventTarget.dispatchEvent(new Event("error"));
-    };
-
     socket.onclose = () => {
       if (this.webSocket === socket) this.webSocket = null;
 
       for (const pending of this.pendingfetchs.values()) {
-        pending.cleanup();
-        pending.reject(new Error("Station client closed"));
+        void pending.cleanup();
+        void pending.reject(new Error("Station client closed"));
       }
-      this.pendingfetchs.clear();
-
-      this.eventTarget.dispatchEvent(new Event("close"));
+      void this.pendingfetchs.clear();
     };
 
     socket.onmessage = (event: MessageEvent<ArrayBuffer>) => {
@@ -67,38 +58,37 @@ export class BaseStationClient<T extends Record<string, unknown>> {
 
       if (
         Array.isArray(message) &&
-        message[0] === "station-client-response" &&
+        message[0] === "base-station-response" &&
         typeof message[1] === "string"
       ) {
         const id = message[1];
         const pending = this.pendingfetchs.get(id);
         if (!pending) return;
 
-        this.pendingfetchs.delete(id);
-        pending.cleanup();
-        pending.resolve(message[2] as T);
+        void this.pendingfetchs.delete(id);
+        void pending.cleanup();
+        void pending.resolve(message[2] as BaseStationMessage);
         return;
       }
 
-      this.eventTarget.dispatchEvent(
-        new CustomEvent("message", { detail: message as T }),
+      void this.eventTarget.dispatchEvent(
+        new CustomEvent("message", { detail: message as BaseStationMessage }),
       );
     };
   }
-  /**main methods*/
 
   /**
-   * Broadcasts a message to other same-origin contexts and opportunistically forwards it to the base station.
+   * Sends a message to the base station without waiting for a response.
    *
-   * @param message The message to broadcast.
+   * @param message The message to send.
    */
-  invoke(message: T) {
+  invoke(message: ActorMessage) {
     if (this.isClosed) return;
 
     if (!this.webSocket || this.webSocket.readyState !== WebSocket.OPEN) return;
 
     try {
-      this.webSocket.send(encode(message));
+      void this.webSocket.send(encode(message));
     } catch {}
   }
 
@@ -106,43 +96,43 @@ export class BaseStationClient<T extends Record<string, unknown>> {
    * Sends a request to the base station and resolves with the corresponding response message.
    *
    * @param message The message to send.
-   * @param options Options that control cancellation and stale follower cleanup.
+   * @param options Options that control cancellation and timeout.
    * @returns A promise that resolves with the response message, or `false` when the request cannot be issued.
    */
   transact(
-    message: T,
+    message: ActorMessage,
     options: BaseStationClientTransactOptions = {},
-  ): Promise<T | false> {
+  ): Promise<BaseStationMessage | false> {
     if (this.isClosed) return Promise.resolve(false);
 
     const id = globalThis.crypto.randomUUID();
     const { signal, ttlMs } = options;
 
-    return new Promise<T | false>((resolve, reject) => {
+    return new Promise<BaseStationMessage | false>((resolve, reject) => {
       let timeoutId: ReturnType<typeof setTimeout> | undefined;
       const abortReason = () =>
         signal?.reason ??
         new DOMException("The operation was aborted.", "AbortError");
 
       if (signal?.aborted) {
-        reject(abortReason());
+        void reject(abortReason());
         return;
       }
 
       if (!this.webSocket || this.webSocket.readyState !== WebSocket.OPEN) {
-        resolve(false);
+        void resolve(false);
         return;
       }
 
       const handleAbort = () => {
-        this.pendingfetchs.delete(id);
-        if (timeoutId) clearTimeout(timeoutId);
-        signal?.removeEventListener("abort", handleAbort);
+        void this.pendingfetchs.delete(id);
+        if (timeoutId) void clearTimeout(timeoutId);
+        void signal?.removeEventListener("abort", handleAbort);
 
-        reject(abortReason());
+        void reject(abortReason());
       };
 
-      this.pendingfetchs.set(id, {
+      void this.pendingfetchs.set(id, {
         resolve,
         reject,
         cleanup: () => {
@@ -150,23 +140,25 @@ export class BaseStationClient<T extends Record<string, unknown>> {
           signal?.removeEventListener("abort", handleAbort);
         },
       });
-      signal?.addEventListener("abort", handleAbort, { once: true });
+      void signal?.addEventListener("abort", handleAbort, { once: true });
 
       if (ttlMs) {
         timeoutId = setTimeout(() => {
-          this.pendingfetchs.delete(id);
-          signal?.removeEventListener("abort", handleAbort);
-          resolve(false);
+          void this.pendingfetchs.delete(id);
+          void signal?.removeEventListener("abort", handleAbort);
+          void resolve(false);
         }, ttlMs);
       }
 
       try {
-        this.webSocket.send(encode(["station-client-request", id, message]));
+        void this.webSocket.send(
+          encode(["base-station-client-request", id, message]),
+        );
       } catch {
         const pending = this.pendingfetchs.get(id);
-        this.pendingfetchs.delete(id);
-        pending?.cleanup();
-        resolve(false);
+        void this.pendingfetchs.delete(id);
+        void pending?.cleanup();
+        void resolve(false);
       }
     });
   }
@@ -177,18 +169,16 @@ export class BaseStationClient<T extends Record<string, unknown>> {
   close(): void {
     this.isClosed = true;
     try {
-      this.webSocket?.close(1000, "closed");
+      void this.webSocket?.close(1000, "closed");
     } catch {}
 
     this.webSocket = null;
     for (const pending of this.pendingfetchs.values()) {
-      pending.cleanup();
-      pending.reject(new Error("Station client closed"));
+      void pending.cleanup();
+      void pending.reject(new Error("Station client closed"));
     }
-    this.pendingfetchs.clear();
+    void this.pendingfetchs.clear();
   }
-
-  /**listeners*/
 
   /**
    * Appends an event listener for events whose type attribute value is `type`.
@@ -197,12 +187,12 @@ export class BaseStationClient<T extends Record<string, unknown>> {
    * @param listener The callback that receives the event.
    * @param options An options object that specifies characteristics about the event listener.
    */
-  addEventListener<K extends keyof BaseStationClientEventMap<T>>(
+  addEventListener<K extends keyof BaseStationClientEventMap>(
     type: K,
-    listener: BaseStationClientEventListenerFor<T, K> | null,
+    listener: BaseStationClientEventListenerFor<K> | null,
     options?: boolean | AddEventListenerOptions,
   ): void {
-    this.eventTarget.addEventListener(
+    void this.eventTarget.addEventListener(
       type,
       listener as EventListenerOrEventListenerObject | null,
       options,
@@ -216,12 +206,12 @@ export class BaseStationClient<T extends Record<string, unknown>> {
    * @param listener The callback to remove.
    * @param options An options object that specifies characteristics about the event listener.
    */
-  removeEventListener<K extends keyof BaseStationClientEventMap<T>>(
+  removeEventListener<K extends keyof BaseStationClientEventMap>(
     type: K,
-    listener: BaseStationClientEventListenerFor<T, K> | null,
+    listener: BaseStationClientEventListenerFor<K> | null,
     options?: boolean | EventListenerOptions,
   ): void {
-    this.eventTarget.removeEventListener(
+    void this.eventTarget.removeEventListener(
       type,
       listener as EventListenerOrEventListenerObject | null,
       options,
