@@ -25,7 +25,7 @@ export class BaseStationMessageHandler {
   static ingest(message: ArrayBuffer) {
     if (!(message instanceof ArrayBuffer)) return
 
-    let decoded = undefined
+    let decoded: BaseStationMessage
 
     try {
       decoded = decode(message) as BaseStationMessage
@@ -45,23 +45,25 @@ export class BaseStationMessageHandler {
 
     switch (decoded.kind) {
       case 'iceServers': {
-        const { detail } = decoded
+        const { id, detail } = decoded
         if (
+          id !== 'string' ||
           !Object.hasOwn(detail, 'iceServers') ||
-          (detail.id !== undefined && typeof detail.id !== 'string') ||
           (detail.iceServers !== false && !Array.isArray(detail.iceServers))
         )
           return
 
         return void this.eventTarget.dispatchEvent(
-          new CustomEvent('iceServers', { detail: decoded })
+          new CustomEvent('iceServers', {
+            detail: { id, iceServers: detail.iceServers },
+          })
         )
       }
       case 'checkoutStatus': {
-        const { detail } = decoded
+        const { id, detail } = decoded
         if (
+          id !== 'string' ||
           !Object.hasOwn(detail, 'checkoutStatus') ||
-          (detail.id !== undefined && typeof detail.id !== 'string') ||
           (detail.checkoutStatus !== false &&
             detail.checkoutStatus !== 'paid' &&
             detail.checkoutStatus !== 'unpaid' &&
@@ -70,14 +72,16 @@ export class BaseStationMessageHandler {
           return
 
         return void this.eventTarget.dispatchEvent(
-          new CustomEvent('checkoutStatus', { detail: decoded })
+          new CustomEvent('checkoutStatus', {
+            detail: { id, checkoutStatus: detail.checkoutStatus },
+          })
         )
       }
       case 'invoiceStatus': {
-        const { detail } = decoded
+        const { id, detail } = decoded
         if (
+          id !== 'string' ||
           !Object.hasOwn(detail, 'invoiceStatus') ||
-          (detail.id !== undefined && typeof detail.id !== 'string') ||
           (detail.invoiceStatus !== false &&
             detail.invoiceStatus !== null &&
             detail.invoiceStatus !== 'draft' &&
@@ -89,7 +93,9 @@ export class BaseStationMessageHandler {
           return
 
         return void this.eventTarget.dispatchEvent(
-          new CustomEvent('invoiceStatus', { detail: decoded })
+          new CustomEvent('invoiceStatus', {
+            detail: { id, invoiceStatus: detail.invoiceStatus },
+          })
         )
       }
     }

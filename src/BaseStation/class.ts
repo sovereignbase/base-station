@@ -37,7 +37,7 @@ export class BaseStation extends DurableObject<Env> {
 
     void this.ctx.waitUntil(
       void (async () => {
-        this.ipAddress = request.headers.get('cf-connecting-ip') ?? ''
+        this.ipAddress = request.headers.get('cf-connecting-ip')
         this.clientId = new URL(request.url).pathname.slice(1)[0]
 
         //VIOLATION HANDLER
@@ -63,14 +63,14 @@ export class BaseStation extends DurableObject<Env> {
 
         //ICE SERVERS REQUEST HANDLER
         void BaseStationClientMessageHandler.addEventListener(
-          'iceServers',
+          'iceServersGet',
           async ({ detail }) => {
             const iceServers = await generateIceServers(this.env)
             void this.actor.send(
               encode({
+                id: detail.id,
                 kind: 'iceServers',
                 detail: {
-                  id: detail.id,
                   iceServers,
                 },
               } satisfies BaseStationMessage)
@@ -80,7 +80,7 @@ export class BaseStation extends DurableObject<Env> {
 
         // CHECKOUT STATUS REQUEST
         void BaseStationClientMessageHandler.addEventListener(
-          'checkoutStatus',
+          'checkoutStatusGet',
           async ({ detail }) => {
             const checkoutStatus = await fetchStripeCheckoutStatus(
               this.ctx,
@@ -90,9 +90,9 @@ export class BaseStation extends DurableObject<Env> {
             )
             void this.actor.send(
               encode({
+                id: detail.id,
                 kind: 'checkoutStatus',
                 detail: {
-                  id: detail.id,
                   checkoutStatus,
                 },
               } satisfies BaseStationMessage)
@@ -102,7 +102,7 @@ export class BaseStation extends DurableObject<Env> {
 
         // INVOICE STATUS REQUEST
         void BaseStationClientMessageHandler.addEventListener(
-          'invoiceStatus',
+          'invoiceStatusGet',
           async ({ detail }) => {
             const invoiceStatus = await fetchStripeInvoiceStatus(
               this.ctx,
@@ -112,9 +112,10 @@ export class BaseStation extends DurableObject<Env> {
             )
             void this.actor.send(
               encode({
+                id: detail.id,
+
                 kind: 'invoiceStatus',
                 detail: {
-                  id: detail.id,
                   invoiceStatus,
                 },
               } satisfies BaseStationMessage)

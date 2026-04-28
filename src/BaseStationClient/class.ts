@@ -24,7 +24,12 @@ export class BaseStationClient {
   private isClosed: boolean = false
   private readonly pendingTransacts = new Map<
     string,
-    BaseStationClientPendingTransact<BaseStationMessage>
+    BaseStationClientPendingTransact<
+      Omit<
+        BaseStationClientEventMap[keyof BaseStationClientEventMap]['detail'],
+        'id'
+      >
+    >
   >()
 
   /**
@@ -52,53 +57,34 @@ export class BaseStationClient {
     this.webSocket = socket
 
     BaseStationMessageHandler.addEventListener('iceServers', ({ detail }) => {
-      const id = detail.detail.id
+      const { id, iceServers } = detail
       const pending = this.pendingTransacts.get(id)
-      if (id && pending) {
-        void this.pendingTransacts.delete(id)
-        void pending.cleanup()
-        void pending.resolve(detail)
-        return
-      }
-
-      void this.eventTarget.dispatchEvent(
-        new CustomEvent('message', { detail })
-      )
+      void this.pendingTransacts.delete(id)
+      void pending.cleanup()
+      void pending.resolve(iceServers)
     })
 
     BaseStationMessageHandler.addEventListener(
       'checkoutStatus',
       ({ detail }) => {
-        const id = detail.detail.id
-        const pending = id ? this.pendingTransacts.get(id) : undefined
-        if (id && pending) {
-          void this.pendingTransacts.delete(id)
-          void pending.cleanup()
-          void pending.resolve(detail)
-          return
-        }
+        const { id, checkoutStatus } = detail
+        const pending = this.pendingTransacts.get(id)
 
-        void this.eventTarget.dispatchEvent(
-          new CustomEvent('message', { detail })
-        )
+        void this.pendingTransacts.delete(id)
+        void pending.cleanup()
+        void pending.resolve(checkoutStatus)
       }
     )
 
     BaseStationMessageHandler.addEventListener(
       'invoiceStatus',
       ({ detail }) => {
-        const id = detail.detail.id
-        const pending = id ? this.pendingTransacts.get(id) : undefined
-        if (id && pending) {
-          void this.pendingTransacts.delete(id)
-          void pending.cleanup()
-          void pending.resolve(detail)
-          return
-        }
+        const { id, invoiceStatus } = detail
+        const pending = this.pendingTransacts.get(id)
 
-        void this.eventTarget.dispatchEvent(
-          new CustomEvent('message', { detail })
-        )
+        void this.pendingTransacts.delete(id)
+        void pending.cleanup()
+        void pending.resolve(invoiceStatus)
       }
     )
 
@@ -125,13 +111,16 @@ export class BaseStationClient {
    *
    * @param message The client message to MessagePack-encode and send.
    */
-  invoke(message: BaseStationClientInvokeMessage) {
+  invoke<K extends BaseStationClientInvokeMessage['kind']>(
+    kind: K,
+    detail: Extract<BaseStationClientInvokeMessage, { kind: K }>['detail']
+  ) {
     if (this.isClosed) return
 
     if (!this.webSocket || this.webSocket.readyState !== WebSocket.OPEN) return
 
     try {
-      void this.webSocket.send(encode(message))
+      void this.webSocket.send(encode({ kind, detail }))
     } catch {}
   }
 
@@ -151,12 +140,23 @@ export class BaseStationClient {
     kind: K,
     detail: Extract<BaseStationClientTransactMessage, { kind: K }>['detail'],
     options: BaseStationClientTransactOptions = {}
-  ): Promise<BaseStationMessage | false> {
+  ): Promise<
+    | Omit<
+        BaseStationClientEventMap[keyof BaseStationClientEventMap]['detail'],
+        'id'
+      >
+    | false
+  > {
     if (this.isClosed) return Promise.resolve(false)
     const id = globalThis.crypto.randomUUID()
     const { signal, ttlMs } = options
 
-    return new Promise<BaseStationMessage | false>((resolve, reject) => {
+    return new Promise<
+      Omit<
+        BaseStationClientEventMap[keyof BaseStationClientEventMap]['detail'],
+        'id'
+      >
+    >((resolve, reject) => {
       let timeoutId: ReturnType<typeof setTimeout> | undefined
       const abortReason = () =>
         signal?.reason ??

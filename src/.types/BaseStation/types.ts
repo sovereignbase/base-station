@@ -8,6 +8,11 @@ import type { StripeCheckoutStatus, StripeInvoiceStatus } from '../types.js'
 export type BaseStationMessage =
   | {
       /**
+       * Transaction id that correlates the response to a request.
+       */
+      id: string
+
+      /**
        * Response containing generated WebRTC ICE servers.
        */
       kind: 'iceServers'
@@ -17,17 +22,16 @@ export type BaseStationMessage =
        */
       detail: {
         /**
-         * Transaction id that correlates the response to a request.
-         */
-        id: string
-
-        /**
          * Generated ICE servers, or `false` when they could not be generated.
          */
         iceServers: RTCIceServer[] | false
       }
     }
   | {
+      /**
+       * Transaction id that correlates the response to a request.
+       */
+      id: string
       /**
        * Response containing a Stripe Checkout Session payment status.
        */
@@ -38,17 +42,16 @@ export type BaseStationMessage =
        */
       detail: {
         /**
-         * Transaction id that correlates the response to a request.
-         */
-        id: string
-
-        /**
          * Stripe checkout payment status, or `false` when unavailable.
          */
         checkoutStatus: false | StripeCheckoutStatus
       }
     }
   | {
+      /**
+       * Transaction id that correlates the response to a request.
+       */
+      id: string
       /**
        * Response containing a Stripe invoice status.
        */
@@ -58,11 +61,6 @@ export type BaseStationMessage =
        * Invoice status response details.
        */
       detail: {
-        /**
-         * Transaction id that correlates the response to a request.
-         */
-        id: string
-
         /**
          * Stripe invoice status, or `false` when unavailable.
          */
@@ -77,21 +75,36 @@ export type BaseStationMessageHandlerEventMap = {
   /**
    * Emitted for validated ICE server responses.
    */
-  iceServers: CustomEvent<Extract<BaseStationMessage, { kind: 'iceServers' }>>
+  iceServers: CustomEvent<{
+    id: string
+    iceServers: Extract<
+      BaseStationMessage,
+      { kind: 'iceServers' }
+    >['detail']['iceServers']
+  }>
 
   /**
    * Emitted for validated Stripe Checkout Session status responses.
    */
-  checkoutStatus: CustomEvent<
-    Extract<BaseStationMessage, { kind: 'checkoutStatus' }>
-  >
+  checkoutStatus: CustomEvent<{
+    id: string
+    checkoutStatus: Extract<
+      BaseStationMessage,
+      { kind: 'checkoutStatus' }
+    >['detail']['checkoutStatus']
+  }>
 
   /**
    * Emitted for validated Stripe invoice status responses.
    */
-  invoiceStatus: CustomEvent<
-    Extract<BaseStationMessage, { kind: 'invoiceStatus' }>
-  >
+  invoiceStatus: CustomEvent<{
+    id: string
+
+    invoiceStatus: Extract<
+      BaseStationMessage,
+      { kind: 'invoiceStatus' }
+    >['detail']['invoiceStatus']
+  }>
 }
 
 /**
